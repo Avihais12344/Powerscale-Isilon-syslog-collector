@@ -4,6 +4,107 @@ receivers:
       listen_address: "0.0.0.0:54526"
     protocol: rfc5424
 
+# Thanks Claude Haiku 4.5 for the log parsing logic!
+processors:
+  transform:
+    log_statements:
+      - context: log
+        statements:
+          # Extract the message from body and split by pipe
+          - let fields = Split(body.string_value, "|")
+          
+          # Common fields for all operations
+          - set attributes["event_id"] = fields[0]
+          - set attributes["user_sid"] = fields[1]
+          - set attributes["user_id"] = fields[2]
+          - set attributes["zone_name"] = fields[3]
+          - set attributes["zone_id"] = fields[4]
+          - set attributes["client_ip"] = fields[5]
+          - set attributes["protocol"] = fields[6]
+          - set attributes["operation"] = fields[7]
+          - set attributes["nt_status"] = fields[8]
+          
+          # Operation-specific field parsing
+          - if attributes["operation"] == "OPEN" then
+              set attributes["desired_access"] = fields[9]
+              set attributes["is_directory"] = fields[10]
+              set attributes["create_result"] = fields[11]
+              set attributes["inode"] = fields[12]
+              set attributes["filename"] = fields[13]
+            end
+          
+          - if attributes["operation"] == "READ" then
+              set attributes["desired_access"] = fields[9]
+              set attributes["is_directory"] = fields[10]
+              set attributes["bytes_read"] = fields[11]
+              set attributes["inode"] = fields[12]
+              set attributes["filename"] = fields[13]
+            end
+          
+          - if attributes["operation"] == "WRITE" then
+              set attributes["desired_access"] = fields[9]
+              set attributes["is_directory"] = fields[10]
+              set attributes["bytes_written"] = fields[11]
+              set attributes["inode"] = fields[12]
+              set attributes["filename"] = fields[13]
+            end
+          
+          - if attributes["operation"] == "CREATE" then
+              set attributes["desired_access"] = fields[9]
+              set attributes["is_directory"] = fields[10]
+              set attributes["create_result"] = fields[11]
+              set attributes["inode"] = fields[12]
+              set attributes["filename"] = fields[13]
+            end
+          
+          - if attributes["operation"] == "DELETE" then
+              set attributes["desired_access"] = fields[9]
+              set attributes["is_directory"] = fields[10]
+              set attributes["create_result"] = fields[11]
+              set attributes["inode"] = fields[12]
+              set attributes["filename"] = fields[13]
+            end
+          
+          - if attributes["operation"] == "MKDIR" then
+              set attributes["desired_access"] = fields[9]
+              set attributes["is_directory"] = fields[10]
+              set attributes["create_result"] = fields[11]
+              set attributes["inode"] = fields[12]
+              set attributes["filename"] = fields[13]
+            end
+          
+          - if attributes["operation"] == "RENAME" then
+              set attributes["desired_access"] = fields[9]
+              set attributes["is_directory"] = fields[10]
+              set attributes["old_filename"] = fields[11]
+              set attributes["inode"] = fields[12]
+              set attributes["new_filename"] = fields[13]
+            end
+          
+          - if attributes["operation"] == "SETPERMISSION" then
+              set attributes["desired_access"] = fields[9]
+              set attributes["is_directory"] = fields[10]
+              set attributes["permissions"] = fields[11]
+              set attributes["inode"] = fields[12]
+              set attributes["filename"] = fields[13]
+            end
+          
+          - if attributes["operation"] == "SETOWNER" then
+              set attributes["desired_access"] = fields[9]
+              set attributes["is_directory"] = fields[10]
+              set attributes["new_owner"] = fields[11]
+              set attributes["inode"] = fields[12]
+              set attributes["filename"] = fields[13]
+            end
+          
+          - if attributes["operation"] == "APPEND" then
+              set attributes["desired_access"] = fields[9]
+              set attributes["is_directory"] = fields[10]
+              set attributes["bytes_appended"] = fields[11]
+              set attributes["inode"] = fields[12]
+              set attributes["filename"] = fields[13]
+            end
+
 exporters:
   file:
     path: /mnt/logs/logs.jsonl
@@ -17,4 +118,5 @@ service:
   pipelines:
     logs:
       receivers: [syslog]
+      processors: [transform]
       exporters: [file]
