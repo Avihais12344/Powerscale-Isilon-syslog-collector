@@ -1,15 +1,8 @@
 receivers:
-  # syslog:
-  #   tcp:
-  #     listen_address: "0.0.0.0:54526"
-  #   protocol: rfc5424
-  #   preserve_raw_logs: true
-  otlp:
-    protocols:
-      grpc:
-        endpoint: 0.0.0.0:4317
-      http:
-        endpoint: 0.0.0.0:4318
+  syslog:
+    tcp:
+      listen_address: "0.0.0.0:54526"
+    protocol: rfc5424
 
 exporters:
   file:
@@ -23,5 +16,5 @@ service:
   extensions: [health_check]
   pipelines:
     logs:
-      receivers: [otlp]
+      receivers: [syslog]
       exporters: [file]
