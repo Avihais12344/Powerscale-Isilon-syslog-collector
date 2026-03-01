@@ -1,0 +1,15 @@
+services:
+  # Copied from: https://opentelemetry.io/docs/collector/install/docker/
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol/config.yaml
+      - ./logs:/mnt/logs
+    ports:
+      - "54526:54526" # syslog receiver (UDP and TCP)
+      - "13133:13133" # health_check extension
+    # Update the config that it uses
+    # (as the command may change depending on the image).
+    # Thanks for:
+    # https://www.elastic.co/docs/solutions/observability/get-started/opentelemetry/quickstart/ech/docker#create-the-compose-file
+    command: ["--config", "/etc/otelcol/config.yaml" ]
