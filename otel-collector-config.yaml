@@ -5,6 +5,9 @@ receivers:
     protocol: rfc5424
 
 # Thanks Claude Haiku 4.5 for the log parsing logic!
+# TODO: Look at the router connector:
+# https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/connector/routingconnector/README.md
+# It may help us understand what to do.
 processors:
   transform:
     log_statements:
