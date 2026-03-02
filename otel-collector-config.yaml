@@ -23,9 +23,20 @@ processors:
           # so we can set it as an attribute for all logs.
           - set(log.attributes["user_sid"], log.attributes["fields"][0])
 
+connectors:
+  routing/by_message:
+    default_pipelines: [logs/other]
+    table:
+      - context: log
+        condition: ContainsValue(["RENAME", "DELETE", "SETPERMISSION", "SETOWNER", "LISTSTATUS", "GETFILESTATUS", "OPEN"], log.attributes["operation"])
+        pipelines: [logs/files_audits]
+
+
 exporters:
-  file:
-    path: /mnt/logs/logs.jsonl
+  file/file_audits:
+    path: /mnt/logs/file_audits.jsonl
+  file/other_audits:
+    path: /mnt/logs/other.jsonl
 
 extensions:
   health_check:
@@ -34,7 +45,13 @@ extensions:
 service:
   extensions: [health_check]
   pipelines:
-    logs:
+    logs/in:
       receivers: [syslog]
       processors: [transform/get_operation]
-      exporters: [file]
+      exporters: [routing/by_message]
+    logs/files_audits:
+      receivers: [routing/by_message]
+      exporters: [file/file_audits]
+    logs/other:
+      receivers: [routing/by_message]
+      exporters: [file/other_audits]
