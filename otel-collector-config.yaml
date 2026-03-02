@@ -19,6 +19,9 @@ processors:
           # For file operations it's at the 6th index.
           # For other operations it will be the `ntStatus`.
           - set(log.attributes["operation"], log.attributes["fields"][6])
+          # The user SID is always at the 0th index,
+          # so we can set it as an attribute for all logs.
+          - set(log.attributes["user_sid"], log.attributes["fields"][0])
 
 exporters:
   file:
