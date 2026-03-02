@@ -6,6 +6,14 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
+  # Inspired from: https://www.jaegertracing.io/docs/2.15/getting-started/#all-in-one
+  jager:
+    image: cr.jaegertracing.io/jaegertracing/jaeger:2.15.0
+    ports:
+      - "16686:16686" # for accessing the UI
+      # - "4317:4317" # for receiving traces via OTLP gRPC
+      # - "4318:4318" # for receiving traces via OTLP HTTP
+
   # Copied from: https://opentelemetry.io/docs/collector/install/docker/
   otel-collector:
     image: otel/opentelemetry-collector-contrib
