@@ -24,8 +24,8 @@ processors:
           - set(log.attributes["user_sid"], log.attributes["fields"][0])
           # TODO: TEMPORARY: Inject a fake Trace ID and Span ID to prove the field exists
           # TraceID must be 16 bytes (32 hex chars), SpanID 8 bytes (16 hex chars)
-          - set(trace_id, TraceID("00000000000000000000000000000123"))
-          - set(span_id, SpanID("0000000000000456"))
+          # - set(trace_id, TraceID("00000000000000000000000000000123"))
+          # - set(span_id, SpanID("0000000000000456"))
 
 connectors:
   routing/by_message:
@@ -37,10 +37,16 @@ connectors:
 
 
 exporters:
-  file/file_audits:
-    path: /mnt/logs/file_audits.jsonl
-  file/other_audits:
-    path: /mnt/logs/other.jsonl
+  debug/file_audits:
+    verbosity: detailed
+    use_internal_logger: false
+    output_paths:
+      - /mnt/logs/file_audits.txt
+  debug/other_audits:
+    verbosity: detailed
+    use_internal_logger: false
+    output_paths:
+      - /mnt/logs/other.txt
 
 extensions:
   health_check:
@@ -73,7 +79,7 @@ service:
       exporters: [routing/by_message]
     logs/files_audits:
       receivers: [routing/by_message]
-      exporters: [file/file_audits]
+      exporters: [debug/file_audits]
     logs/other:
       receivers: [routing/by_message]
-      exporters: [file/other_audits]
+      exporters: [debug/other_audits]
