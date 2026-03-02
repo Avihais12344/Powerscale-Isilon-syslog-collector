@@ -24,8 +24,10 @@ processors:
           - set(log.attributes["user_sid"], log.attributes["fields"][0])
           # TODO: TEMPORARY: Inject a fake Trace ID and Span ID to prove the field exists
           # TraceID must be 16 bytes (32 hex chars), SpanID 8 bytes (16 hex chars)
-          # - set(trace_id, TraceID("00000000000000000000000000000123"))
-          # - set(span_id, SpanID("0000000000000456"))
+          # Need to find a way to auto create them.
+          # It also doesn't sened the trace to the jager, so it's not helpful so much.
+          - set(trace_id, TraceID("00000000000000000000000000000123"))
+          - set(span_id, SpanID("0000000000000456"))
 
 connectors:
   routing/by_message:
