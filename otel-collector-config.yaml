@@ -28,6 +28,11 @@ processors:
           # It also doesn't sened the trace to the jager, so it's not helpful so much.
           - set(trace_id, TraceID("00000000000000000000000000000123"))
           - set(span_id, SpanID("0000000000000456"))
+          # To use with the kafka exporter with encoding: raw.
+          # Look at: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/kafkaexporter#supported-encodings
+          - 'set(body, {"operation": log.attributes["operation"], "user_sid": log.attributes["user_sid"]})'
+          # If it counts a map as byte array, we may need to stringify it first.
+          # - set(body, String(body))
 
 connectors:
   routing/by_message:
