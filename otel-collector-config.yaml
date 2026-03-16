@@ -1,31 +1,92 @@
 receivers:
-  # syslog:
-  #   tcp:
-  #     listen_address: "0.0.0.0:54526"
-  #   protocol: rfc5424
-  #   preserve_raw_logs: true
-  otlp:
-    protocols:
-      grpc:
-        endpoint: 0.0.0.0:4317
-      http:
-        endpoint: 0.0.0.0:4318
+  syslog:
+    tcp:
+      listen_address: "0.0.0.0:54526"
+    protocol: rfc5424
+
+# Thanks Claude Haiku 4.5 for the log parsing logic!
+# TODO: Look at the router connector:
+# https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/connector/routingconnector/README.md
+# It may help us understand what to do.
+processors:
+  transform/get_operation:
+    log_statements:
+      - context: log
+        statements:
+          # Split message to the fields and save them.
+          - set(log.attributes["fields"], Split(log.attributes["message"], "|"))
+          # Set the operation it needs to do.
+          # For file operations it's at the 6th index.
+          # For other operations it will be the `ntStatus`.
+          - set(log.attributes["operation"], log.attributes["fields"][6])
+          # The user SID is always at the 0th index,
+          # so we can set it as an attribute for all logs.
+          - set(log.attributes["user_sid"], log.attributes["fields"][0])
+          # TODO: TEMPORARY: Inject a fake Trace ID and Span ID to prove the field exists
+          # TraceID must be 16 bytes (32 hex chars), SpanID 8 bytes (16 hex chars)
+          # Need to find a way to auto create them.
+          # It also doesn't sened the trace to the jager, so it's not helpful so much.
+          - set(trace_id, TraceID("00000000000000000000000000000123"))
+          - set(span_id, SpanID("0000000000000456"))
+          # To use with the kafka exporter with encoding: raw.
+          # Look at: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/kafkaexporter#supported-encodings
+          - 'set(body, {"operation": log.attributes["operation"], "user_sid": log.attributes["user_sid"]})'
+          # If it counts a map as byte array, we may need to stringify it first.
+          # - set(body, String(body))
+
+connectors:
+  routing/by_message:
+    default_pipelines: [logs/other]
+    table:
+      - context: log
+        condition: ContainsValue(["RENAME", "DELETE", "SETPERMISSION", "SETOWNER", "LISTSTATUS", "GETFILESTATUS", "OPEN"], log.attributes["operation"])
+        pipelines: [logs/files_audits]
+
 
 exporters:
-  # file:
-  #   path: /mnt/logs/logs.jsonl
-  otlp_grpc:
-    endpoint: 0.0.0.0:4317
-    sending_queue:
-      batch:
+  debug/file_audits:
+    verbosity: detailed
+    use_internal_logger: false
+    output_paths:
+      - /mnt/logs/file_audits.txt
+  debug/other_audits:
+    verbosity: detailed
+    use_internal_logger: false
+    output_paths:
+      - /mnt/logs/other.txt
 
 extensions:
   health_check:
     endpoint: 0.0.0.0:13133
 
 service:
+  telemetry:
+    # Enable otel collector metrics.
+    metrics:
+      level: normal
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: '0.0.0.0'
+                port: 8888
+    # Enable otel collector traces.
+    traces:
+      processors:
+        - batch:
+            exporter:
+              otlp:
+                protocol: http/protobuf
+                endpoint: http://jager:4318/v1/traces
   extensions: [health_check]
   pipelines:
-    logs:
-      receivers: [otlp]
-      exporters: [otlp_grpc]
+    logs/in:
+      receivers: [syslog]
+      processors: [transform/get_operation]
+      exporters: [routing/by_message]
+    logs/files_audits:
+      receivers: [routing/by_message]
+      exporters: [debug/file_audits]
+    logs/other:
+      receivers: [routing/by_message]
+      exporters: [debug/other_audits]
